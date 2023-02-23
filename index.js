@@ -1,20 +1,20 @@
-const path = require('path');
-const captureWebsite = require('capture-website');
-const core = require('@actions/core');
-const artifact = require('@actions/artifact');
-const loadInputs = require('./lib/load-inputs');
-const whichChrome = require('./lib/which-chrome');
+import path from "path";
+import captureWebsite from "capture-website";
+import * as core from "@actions/core";
+import artifact from "@actions/artifact";
+import whichChrome from "./lib/which-chrome";
 
 async function run() {
   try {
     // Get inputs: source, destination, and anything else
-    const { source, destination: destFile, ...inputs } = loadInputs();
+    const source = core.getInput("source");
+    const destFile = core.getInput("destination");
+
     core.debug(`source is ${source}`);
     core.debug(`destination is ${destFile}`);
-    core.debug(`other inputs are ${JSON.stringify(inputs, null, 4)}`);
 
     // Get destination
-    const destFolder = process.env.RUNNER_TEMP;
+    const destFolder = process.env.GITHUB_WORKSPACE;
     const dest = path.join(destFolder, destFile);
 
     // Locate Google Chrome executable
@@ -24,9 +24,9 @@ async function run() {
     // Options for capture
     const options = {
       launchOptions: {
-        executablePath
+        executablePath,
       },
-      ...inputs
+      ...inputs,
     };
 
     // Capture and write to dest
@@ -34,11 +34,15 @@ async function run() {
 
     // Create an artifact
     const artifactClient = artifact.create();
-    const artifactName = destFile.substr(0, destFile.lastIndexOf('.'));
-    const uploadResult = await artifactClient.uploadArtifact(artifactName, [dest], destFolder);
+    const artifactName = destFile.substr(0, destFile.lastIndexOf("."));
+    const uploadResult = await artifactClient.uploadArtifact(
+      artifactName,
+      [dest],
+      destFolder
+    );
 
     // Expose the path to the screenshot as an output
-    core.setOutput('path', dest);
+    core.setOutput("path", dest);
   } catch (error) {
     core.setFailed(error.message);
   }
